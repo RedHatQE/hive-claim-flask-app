@@ -1,1 +1,0 @@
-from ocp_resources.cluster_claim import ClusterClaim

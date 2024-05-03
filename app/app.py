@@ -1,6 +1,7 @@
 import os
 import shortuuid
 from flask import Flask, render_template, request, url_for, redirect
+from werkzeug.wrappers import Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user
 from pyaml_env import parse_config
@@ -10,20 +11,20 @@ from ocp_utilities.infra import get_client
 app = Flask(__name__)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db.sqlite"
-app.config["SECRET_KEY"] = "TOPSECRET"
+app.config["SECRET_KEY"] = "TOPSECRET"  # pragma: allowlist secret
 db = SQLAlchemy()
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 
 
-class Users(UserMixin, db.Model):
+class Users(UserMixin, db.Model):  # type: ignore[name-defined]
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(250), unique=True, nullable=False)
     password = db.Column(db.String(250), nullable=False)
 
 
-def get_all_claims():
+def get_all_claims() -> str:
     claims = """
         <table style="width:100%">
         <tr>
@@ -52,7 +53,7 @@ def get_all_claims():
     return claims
 
 
-def get_cluster_pools():
+def get_cluster_pools() -> str:
     # TODO: Get cluster pools from OCP
     select_form = """
     <form action="/" method="POST">
@@ -67,7 +68,7 @@ def get_cluster_pools():
     return select_form
 
 
-def claim_cluster(user, pool):
+def claim_cluster(user: str, pool: str) -> str:
     _claim = ClusterClaim(
         name=f"{user}-{shortuuid.uuid()[0:5].lower()}-cluster-claim",
         namespace=os.getenv("HIVE_NAMESPACE"),
@@ -76,11 +77,11 @@ def claim_cluster(user, pool):
     try:
         _claim.deploy()
     except Exception as exp:
-        return f"<p>{exp.summary()}</p>"
+        return f"<p>{exp.summary()}</p>"  # type: ignore[attr-defined]
     return f"<p>Cluster {_claim.name} claimed from {pool} by {user}</p>"
 
 
-def claim_cluster_delete(claim_name):
+def claim_cluster_delete(claim_name: str) -> None:
     _claim = ClusterClaim(
         name=claim_name,
         namespace=os.getenv("HIVE_NAMESPACE"),
@@ -111,12 +112,12 @@ with app.app_context():
 
 
 @login_manager.user_loader
-def loader_user(user_id):
+def loader_user(user_id: str) -> Users:
     return Users.query.get(user_id)
 
 
 @app.route("/login", methods=["GET", "POST"])
-def login():
+def login() -> Response | str:
     if request.method == "POST":
         user = Users.query.filter_by(username=request.form.get("username")).first()
         if not user:
@@ -130,13 +131,13 @@ def login():
 
 
 @app.route("/logout")
-def logout():
+def logout() -> Response:
     logout_user()
     return redirect(url_for("home"))
 
 
 @app.route("/", methods=["GET", "POST"])
-def home():
+def home() -> Response | str:
     if request.method == "POST":
         if current_user.is_authenticated:
             if request.form.get("logout"):
