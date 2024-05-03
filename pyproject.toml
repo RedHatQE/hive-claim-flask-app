@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "hive-claim-flask-app"
+version = "0.1.0"
+description = ""
+authors = ["Meni Yakove <myakove@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+flask = "^3.0.3"
+requests-oauthlib = "^2.0.0"
+flask-sqlalchemy = "^3.1.1"
+flask-login = "^0.6.3"
+pyaml-env = "^1.2.1"
+openshift-python-utilities = "^5.0.41"
+openshift-python-wrapper = "^10.0.39"
+shortuuid = "^1.0.13"
+
+
+[tool.poetry.group.dev.dependencies]
+ipython = "^8.24.0"
+ipdb = "^0.13.13"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

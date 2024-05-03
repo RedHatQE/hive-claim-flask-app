@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <style>
+    table,
+    th,
+    td {
+      border: 1px solid black;
+    }
+  </style>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hive clusters claim</title>
+    <style>
+      h1 {
+        color: black;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Hive clusters claim</h1>
+    <nav>
+      {% if current_user.is_authenticated %}
+
+      <p>Welcome, {{ current_user.username }}</p>
+      Active claims: {{ get_all_claims() | safe }} {{ get_cluster_pools() | safe
+      }} {{ claimed | safe }}
+      <form action="#" method="post">
+        <label for="name">Claim name:</label>
+        <input type="text" name="name" />
+        <button type="submit" name="delete_claim" value="delete">
+          Delete claim
+        </button>
+      </form>
+      <form action="" method="POST">
+        <button type="submit" name="logout" value="logout">Logout</button>
+      </form>
+      {% else %}
+      <form action="#" method="post">
+        <label for="username">Username:</label>
+        <input type="text" name="username" />
+        <label for="password">Password:</label>
+        <input type="password" name="password" />
+        <button type="submit">Submit</button>
+      </form>
+      <h1>Please login to start using the app</h1>
+      {% endif %}
+    </nav>
+  </body>
+</html>
