@@ -1,4 +1,5 @@
 import os
+from kubernetes.dynamic.resource import ResourceInstance
 import shortuuid
 from flask import Flask, render_template, request, url_for, redirect
 from werkzeug.wrappers import Response
@@ -11,7 +12,7 @@ from ocp_utilities.infra import get_client
 app = Flask(__name__)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db.sqlite"
-app.config["SECRET_KEY"] = "TOPSECRET"  # pragma: allowlist secret
+app.config["SECRET_KEY"] = os.environ["HIVE_CLAIM_FLASK_APP_SECRET_KEY"]
 db = SQLAlchemy()
 
 login_manager = LoginManager()
@@ -37,7 +38,7 @@ def get_all_claims() -> str:
     dyn_client = get_client()
     for _claim in ClusterClaim.get(dyn_client=dyn_client, namespace=os.getenv("HIVE_NAMESPACE")):
         claim_info = "<tr>"
-        _instnce = _claim.instance
+        _instnce: ResourceInstance = _claim.instance
         claim_info += f"<td>{_instnce.metadata.name}</td>"
         claim_info += f"<td>{_instnce.spec.clusterPoolName}</td>"
         for cond in _instnce.status.conditions:
@@ -97,7 +98,7 @@ app.jinja_env.globals.update(
 
 
 def create_users() -> None:
-    for user in parse_config("app/users.yaml")["users"]:
+    for user in parse_config("app/manifests/users.yaml")["users"]:
         user = Users(username=user, password="msiqe")
         db.session.add(user)
 
@@ -164,7 +165,15 @@ def home() -> Response | str:
     return render_template("home.html")
 
 
+def main() -> None:
+    app.logger.info(f"Starting {app.name} app")
+    app.run(
+        port=int(os.getenv("HIVE_CLAIM_FLASK_APP_PORT", 5000)),
+        host=os.getenv("HIVE_CLAIM_FLASK_APP_HOST", "0.0.0.0"),
+        use_reloader=os.getenv("HIVE_CLAIM_FLASK_APP_RELOAD", False),
+        debug=bool(os.getenv("HIVE_CLAIM_FLASK_APP_DEBUG", False)),
+    )
+
+
 if __name__ == "__main__":
-    os.environ["HIVE_NAMESPACE"] = "msiqe"
-    os.environ["KUBECONFIG"] = "/home/myakove/work/CSPI/hive/msiqe-kubeconfig.txt"
-    app.run(debug=True)
+    main()
