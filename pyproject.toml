@@ -22,6 +22,7 @@ version = "0.1.0"
 description = ""
 authors = ["Meni Yakove <myakove@gmail.com>"]
 readme = "README.md"
+packages = [{ include = "hive_claim_flask_app" }]
 
 [tool.poetry.dependencies]
 python = "^3.12"
