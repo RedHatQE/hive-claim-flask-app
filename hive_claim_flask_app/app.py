@@ -1,33 +1,28 @@
 import os
 from flask import Flask, render_template, request, url_for, redirect
 from werkzeug.wrappers import Response
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user
-from pyaml_env import parse_config
+from flask_login import LoginManager, login_user, logout_user, current_user
 
 
 from hive_claim_flask_app.utils import (
     claim_cluster,
     claim_cluster_delete,
+    create_users,
     delete_all_claims,
     get_all_claims,
     get_cluster_pools,
+    Users,
+    db,
 )
 
-flask_app = Flask(__name__)
+flask_app = Flask("hive-claim-flask-app", template_folder="hive_claim_flask_app/templates")
 
 flask_app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db.sqlite"
 flask_app.config["SECRET_KEY"] = os.environ["HIVE_CLAIM_FLASK_APP_SECRET_KEY"]
-db = SQLAlchemy()
+
 
 login_manager = LoginManager()
 login_manager.init_app(flask_app)
-
-
-class Users(UserMixin, db.Model):  # type: ignore[name-defined]
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(250), unique=True, nullable=False)
-    password = db.Column(db.String(250), nullable=False)
 
 
 flask_app.jinja_env.globals.update(
@@ -35,14 +30,6 @@ flask_app.jinja_env.globals.update(
     claim_cluster=claim_cluster,
     get_cluster_pools=get_cluster_pools,
 )
-
-
-def create_users() -> None:
-    _config = parse_config(os.environ["HIVE_CLAIM_FLASK_APP_USERS_FILE"])
-    _pass = _config["password"]
-    for user in _config["users"]:
-        user = Users(username=user, password=_pass)
-        db.session.add(user)
 
 
 db.init_app(flask_app)
