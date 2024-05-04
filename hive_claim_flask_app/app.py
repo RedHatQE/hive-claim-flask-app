@@ -37,7 +37,7 @@ flask_app.jinja_env.globals.update(
 
 
 def create_users() -> None:
-    _config = parse_config(os.environ["HIVE_CLAIM_FLASK_APP_USERS"])
+    _config = parse_config(os.environ["HIVE_CLAIM_FLASK_APP_USERS_FILE"])
     _pass = _config["password"]
     for user in _config["users"]:
         user = Users(username=user, password=_pass)
