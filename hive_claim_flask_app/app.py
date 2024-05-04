@@ -5,6 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user
 from pyaml_env import parse_config
 
+
 from hive_claim_flask_app.utils import (
     claim_cluster,
     claim_cluster_delete,
