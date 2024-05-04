@@ -1,0 +1,1 @@
+{"$schema": "https://docs.renovatebot.com/renovate-schema.json", "packageRules": [{"matchPackagePatterns": ["flask", "requests-oauthlib", "flask-sqlalchemy", "flask-login", "pyaml-env", "openshift-python-wrapper", "shortuuid", "openshift-python-utilities", "ipython", "ipdb"], "groupName": "poetry-deps"}]}
