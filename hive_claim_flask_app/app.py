@@ -119,7 +119,7 @@ def main() -> None:
     flask_app.run(
         port=int(os.getenv("HIVE_CLAIM_FLASK_APP_PORT", 5000)),
         host=os.getenv("HIVE_CLAIM_FLASK_APP_HOST", "0.0.0.0"),
-        use_reloader=os.getenv("HIVE_CLAIM_FLASK_APP_RELOAD", False),
+        use_reloader=bool(os.getenv("HIVE_CLAIM_FLASK_APP_RELOAD", False)),
         debug=bool(os.getenv("HIVE_CLAIM_FLASK_APP_DEBUG", False)),
     )
 
