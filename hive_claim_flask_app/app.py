@@ -111,7 +111,7 @@ def cluster_info() -> Response | str:
 
 @flask_app.route("/kubeconfig/<filename>", methods=["GET"])
 def download_kubeconfig(filename: str) -> Response | str:
-    return send_file(f"/tmp/{filename}", download_name="kubeconfig", as_attachment=True)  # type: ignore[call-arg]
+    return send_file(f"/tmp/{filename}", download_name=filename, as_attachment=True)  # type: ignore[call-arg]
 
 
 def main() -> None:
