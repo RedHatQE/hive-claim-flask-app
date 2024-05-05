@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, url_for, redirect
+from flask import Flask, render_template, request, send_file, url_for, redirect
 from werkzeug.wrappers import Response
 from flask_login import LoginManager, login_user, logout_user, current_user
 
@@ -10,6 +10,9 @@ from hive_claim_flask_app.utils import (
     create_users,
     delete_all_claims,
     get_all_claims,
+    get_claimed_cluster_creds,
+    get_claimed_cluster_kubeconfig,
+    get_claimed_cluster_web_console,
     get_cluster_pools,
     Users,
     db,
@@ -28,6 +31,9 @@ flask_app.jinja_env.globals.update(
     get_all_claims=get_all_claims,
     claim_cluster=claim_cluster,
     get_cluster_pools=get_cluster_pools,
+    get_claimed_cluster_kubeconfig=get_claimed_cluster_kubeconfig,
+    get_claimed_cluster_creds=get_claimed_cluster_creds,
+    get_claimed_cluster_web_console=get_claimed_cluster_web_console,
 )
 
 
@@ -95,6 +101,16 @@ def home() -> Response | str:
                 return redirect(url_for("home"))
 
     return render_template("home.html")
+
+
+@flask_app.route("/claim", methods=["GET"])
+def cluster_info() -> Response | str:
+    return render_template("cluster-claimed.html", cluster_name=request.args.get("name"))
+
+
+@flask_app.route("/kubeconfig/<filename>", methods=["GET"])
+def download_kubeconfig(filename: str) -> Response | str:
+    return send_file(f"/tmp/{filename}", download_name="kubeconfig", as_attachment=True)  # type: ignore[call-arg]
 
 
 def main() -> None:
