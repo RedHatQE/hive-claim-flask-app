@@ -16,7 +16,6 @@ from hive_claim_flask_app.utils import (
 )
 
 flask_app = Flask("hive-claim-flask-app", template_folder="hive_claim_flask_app/templates")
-
 flask_app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db.sqlite"
 flask_app.config["SECRET_KEY"] = os.environ["HIVE_CLAIM_FLASK_APP_SECRET_KEY"]
 
