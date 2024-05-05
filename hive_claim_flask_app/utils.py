@@ -36,7 +36,7 @@ def get_all_claims() -> str:
         </tr>
     """
     dyn_client = get_client()
-    for _claim in ClusterClaim.get(dyn_client=dyn_client, namespace=os.getenv("HIVE_NAMESPACE")):
+    for _claim in ClusterClaim.get(dyn_client=dyn_client, namespace=os.getenv("HIVE_CLAIM_FLASK_APP_NAMESPACE")):
         claim_info = "<tr>"
         _instnce: ResourceInstance = _claim.instance
         claim_info += f"<td>{_instnce.metadata.name}</td>"
