@@ -2,11 +2,16 @@ from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
 from kubernetes.dynamic.resource import ResourceInstance
 from ocp_resources.cluster_claim import ClusterClaim
-from ocp_utilities.infra import get_client
+from ocp_resources.cluster_pool import ClusterPool
+from ocp_resources.cluster_deployment import ClusterDeployment
+from ocp_resources.secret import Secret
+from ocp_utilities.infra import base64, get_client
 import os
 
 from pyaml_env import parse_config
 import shortuuid
+
+HIVE_CLUSTER_NAMESPACE = os.environ["HIVE_CLAIM_FLASK_APP_NAMESPACE"]
 
 db = SQLAlchemy()
 
@@ -31,21 +36,25 @@ def get_all_claims() -> str:
         <tr>
         <th>Name</th>
         <th>Pool</th>
+        <th>Namespace</th>
         <th>Status</th>
         <th>Message</th>
+        <th>Info</th>
         </tr>
     """
     dyn_client = get_client()
-    for _claim in ClusterClaim.get(dyn_client=dyn_client, namespace=os.getenv("HIVE_CLAIM_FLASK_APP_NAMESPACE")):
+    for _claim in ClusterClaim.get(dyn_client=dyn_client, namespace=HIVE_CLUSTER_NAMESPACE):
         claim_info = "<tr>"
         _instnce: ResourceInstance = _claim.instance
         claim_info += f"<td>{_instnce.metadata.name}</td>"
         claim_info += f"<td>{_instnce.spec.clusterPoolName}</td>"
+        claim_info += f"<td>{_instnce.spec.namespace or 'Not Ready'}</td>"
         for cond in _instnce.status.conditions:
             if cond.type == "Pending":
                 claim_info += f"<td>{cond.reason}</td>"
                 claim_info += f"<td>{cond.message}</td>"
 
+        claim_info += f"<td><a href='/claim?name={_instnce.metadata.name}'>View</a></td>"
         claim_info += "</tr>"
         claims += claim_info
 
@@ -55,7 +64,6 @@ def get_all_claims() -> str:
 
 
 def get_cluster_pools() -> str:
-    # TODO: Get cluster pools from OCP
     pools = """
         <table style="width:100%">
         <tr>
@@ -70,15 +78,19 @@ def get_cluster_pools() -> str:
     <label for="clusterpool">Claim from: </label>
     <select name="ClusterPools" class="Input" id="clusterpool">
     """
-    for cp in ["msiqe-4.15"]:
+    dyn_client = get_client()
+    for cp in ClusterPool.get(dyn_client=dyn_client, namespace=HIVE_CLUSTER_NAMESPACE):
+        _instnce: ResourceInstance = cp.instance
+        _name = _instnce.metadata.name
+        _status = _instnce.status
         pool_info = "<tr>"
-        pool_info += f"<td>{cp}</td>"
-        pool_info += "<td>5</td>"
-        pool_info += "<td>5</td>"
-        pool_info += "<td>0</td>"
+        pool_info += f"<td>{_name}</td>"
+        pool_info += f"<td>{_instnce.spec.size}</td>"
+        pool_info += f"<td>{_status.ready if _status else 'NA'}</td>"
+        pool_info += f"<td>{_status.standby if _status else 'NA'}</td>"
         pool_info += "</tr>"
         pools += pool_info
-        select_form += f"  <option value={cp}>{cp}</option>"
+        select_form += f"  <option value={_name}>{_name}</option>"
 
     pools += "</table>"
     select_form += "</select>"
@@ -89,7 +101,7 @@ def get_cluster_pools() -> str:
 def claim_cluster(user: str, pool: str) -> str:
     _claim = ClusterClaim(
         name=f"{user}-{shortuuid.uuid()[0:5].lower()}-cluster-claim",
-        namespace=os.getenv("HIVE_NAMESPACE"),
+        namespace=HIVE_CLUSTER_NAMESPACE,
         cluster_pool_name=pool,
     )
     try:
@@ -102,12 +114,45 @@ def claim_cluster(user: str, pool: str) -> str:
 def claim_cluster_delete(claim_name: str) -> None:
     _claim = ClusterClaim(
         name=claim_name,
-        namespace=os.getenv("HIVE_NAMESPACE"),
+        namespace=HIVE_CLUSTER_NAMESPACE,
     )
     _claim.clean_up()
 
 
 def delete_all_claims() -> None:
     dyn_client = get_client()
-    for _claim in ClusterClaim.get(dyn_client=dyn_client, namespace=os.getenv("HIVE_NAMESPACE")):
+    for _claim in ClusterClaim.get(dyn_client=dyn_client, namespace=HIVE_CLUSTER_NAMESPACE):
         _claim.clean_up()
+
+
+def get_claimed_cluster_deployment(claim_name: str) -> ClusterDeployment:
+    _claim = ClusterClaim(name=claim_name, namespace=HIVE_CLUSTER_NAMESPACE)
+    _instance: ResourceInstance = _claim.instance
+    return ClusterDeployment(name=_instance.spec.namespace, namespace=_instance.spec.namespace)
+
+
+def get_claimed_cluster_web_console(claim_name: str) -> str:
+    _console_url = get_claimed_cluster_deployment(claim_name=claim_name).instance.status.webConsoleURL
+    return f"<p><b>Console:</b> <a href='{_console_url}'>{_console_url}</a></p>"
+
+
+def get_claimed_cluster_creds(claim_name: str) -> str:
+    _cluster_deployment = get_claimed_cluster_deployment(claim_name=claim_name)
+    _secret = Secret(
+        name=_cluster_deployment.instance.spec.clusterMetadata.adminPasswordSecretRef.name,
+        namespace=_cluster_deployment.namespace,
+    )
+    return f"<p><b>username:</b> {_secret.instance.data.username}<br /><b>password:</b> {_secret.instance.data.password}</p>"
+
+
+def get_claimed_cluster_kubeconfig(claim_name: str) -> str:
+    _cluster_deployment = get_claimed_cluster_deployment(claim_name=claim_name)
+    _secret = Secret(
+        name=_cluster_deployment.instance.spec.clusterMetadata.adminKubeconfigSecretRef.name,
+        namespace=_cluster_deployment.namespace,
+    )
+    _kubeconfig_file_name = f"kubeconfig-{claim_name}"
+    with open(f"/tmp/{_kubeconfig_file_name}", "w") as fd:
+        fd.write(base64.b64decode(_secret.instance.data.kubeconfig).decode())
+
+    return f"<p><b>Kubeconfig:</b> <a href='/kubeconfig/{_kubeconfig_file_name}'>Kubeconfig</a></p>"

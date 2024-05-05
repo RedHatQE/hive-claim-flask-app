@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <style>
+    table,
+    th,
+    td {
+      border: 1px solid black;
+    }
+  </style>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hive clusters claim</title>
+    <style>
+      h1 {
+        color: black;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Cluster {{ cluster_name }} Info</h1>
+    {{ get_claimed_cluster_web_console(cluster_name) | safe }} {{
+    get_claimed_cluster_kubeconfig(cluster_name) | safe }} {{
+    get_claimed_cluster_creds(cluster_name) | safe }}
+  </body>
+</html>
