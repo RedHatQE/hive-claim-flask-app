@@ -1,7 +1,5 @@
 FROM quay.io/redhat_msi/qe-tools-base-image:latest
 
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip && ./aws/install
-
 ENV APP_DIR=/hive-claim-flask-app
 ENV POETRY_HOME=$APP_DIR
 ENV PATH="$APP_DIR/bin:$PATH"
