@@ -43,6 +43,14 @@ openshift-python-utilities = "^5.0.41"
 ipython = "^8.24.0"
 ipdb = "^0.13.13"
 
+
+[tool.poetry-dynamic-versioning]
+enable = true
+pattern = "((?P<epoch>\\d+)!)?(?P<base>\\d+(\\.\\d+)*)"
+
+[tool.poetry-dynamic-versioning.substitution]
+files = ["VERSION"]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
