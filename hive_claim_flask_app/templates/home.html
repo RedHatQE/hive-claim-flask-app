@@ -35,8 +35,10 @@
           Delete claim
         </button>
         <button type="submit" name="delete_all_claims" value="delete">
-          Delete all claims
+          Delete all {{ current_user.username }} claims
         </button>
+        {{ delete_claim_error }}
+        <p>{{ deleted_claims }}</p>
       </form>
       <p></p>
       <form action="" method="POST">
