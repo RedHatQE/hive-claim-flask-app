@@ -23,5 +23,12 @@
     {{ get_claimed_cluster_web_console(cluster_name) | safe }} {{
     get_claimed_cluster_kubeconfig(cluster_name) | safe }} {{
     get_claimed_cluster_creds(cluster_name) | safe }}
+    <button
+      onclick="location.href = '/'"
+      id="back_home"
+      class="float-left submit-button"
+    >
+      Home
+    </button>
   </body>
 </html>

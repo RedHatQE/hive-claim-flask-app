@@ -125,19 +125,29 @@ def delete_all_claims() -> None:
         _claim.clean_up()
 
 
-def get_claimed_cluster_deployment(claim_name: str) -> ClusterDeployment:
+def get_claimed_cluster_deployment(claim_name: str) -> ClusterDeployment | str:
     _claim = ClusterClaim(name=claim_name, namespace=HIVE_CLUSTER_NAMESPACE)
     _instance: ResourceInstance = _claim.instance
+    if not _instance.spec.namespace:
+        return "<p><b>ClusterDeployment not found for this claim</b></p>"
+
     return ClusterDeployment(name=_instance.spec.namespace, namespace=_instance.spec.namespace)
 
 
 def get_claimed_cluster_web_console(claim_name: str) -> str:
-    _console_url = get_claimed_cluster_deployment(claim_name=claim_name).instance.status.webConsoleURL
+    _cluster_deployment = get_claimed_cluster_deployment(claim_name=claim_name)
+    if isinstance(_cluster_deployment, str):
+        return _cluster_deployment
+
+    _console_url = _cluster_deployment.instance.status.webConsoleURL
     return f"<p><b>Console:</b> <a href='{_console_url}'>{_console_url}</a></p>"
 
 
 def get_claimed_cluster_creds(claim_name: str) -> str:
     _cluster_deployment = get_claimed_cluster_deployment(claim_name=claim_name)
+    if isinstance(_cluster_deployment, str):
+        return ""
+
     _secret = Secret(
         name=_cluster_deployment.instance.spec.clusterMetadata.adminPasswordSecretRef.name,
         namespace=_cluster_deployment.namespace,
@@ -147,6 +157,9 @@ def get_claimed_cluster_creds(claim_name: str) -> str:
 
 def get_claimed_cluster_kubeconfig(claim_name: str) -> str:
     _cluster_deployment = get_claimed_cluster_deployment(claim_name=claim_name)
+    if isinstance(_cluster_deployment, str):
+        return ""
+
     _secret = Secret(
         name=_cluster_deployment.instance.spec.clusterMetadata.adminKubeconfigSecretRef.name,
         namespace=_cluster_deployment.namespace,
