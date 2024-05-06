@@ -42,6 +42,14 @@
       <form action="" method="POST">
         <button type="submit" name="logout" value="logout">Logout</button>
       </form>
+      <br />
+      <button
+        onclick="location.href = '/'"
+        id="refresh_home"
+        class="float-left submit-button"
+      >
+        Refresh
+      </button>
       {% else %}
       <form action="" method="post">
         <label for="username">Username:</label>
