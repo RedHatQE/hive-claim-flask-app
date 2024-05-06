@@ -119,10 +119,15 @@ def claim_cluster_delete(claim_name: str) -> None:
     _claim.clean_up()
 
 
-def delete_all_claims() -> None:
+def delete_all_claims(user: str) -> str:
     dyn_client = get_client()
+    deleted_claims = ""
     for _claim in ClusterClaim.get(dyn_client=dyn_client, namespace=HIVE_CLUSTER_NAMESPACE):
-        _claim.clean_up()
+        if user in _claim.name:
+            _claim.clean_up()
+            deleted_claims += f"Deleted {_claim.name} <br />"
+
+    return deleted_claims
 
 
 def get_claimed_cluster_deployment(claim_name: str) -> ClusterDeployment | str:

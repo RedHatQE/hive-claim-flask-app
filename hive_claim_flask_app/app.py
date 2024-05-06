@@ -76,21 +76,28 @@ def logout() -> Response:
 def home() -> Response | str:
     if request.method == "POST":
         if current_user.is_authenticated:
+            username = current_user.username
             if request.form.get("logout"):
                 logout_user()
                 return redirect(url_for("home"))
 
             if pool := request.form.get("ClusterPools"):
-                claimed = claim_cluster(user=current_user.username, pool=pool)
+                claimed = claim_cluster(user=username, pool=pool)
                 flask_app.jinja_env.globals.update(claimed=claimed)
                 return redirect(url_for("home"))
 
             if request.form.get("delete_claim"):
                 if claim_name := request.form.get("name"):
+                    if username not in claim_name:
+                        return render_template(
+                            "home.html", delete_claim_error=f"{username} is not allowed to delete {claim_name}"
+                        )
+
                     claim_cluster_delete(claim_name=claim_name.strip())
 
             if request.form.get("delete_all_claims"):
-                delete_all_claims()
+                deleted_claims = delete_all_claims(user=username)
+                return render_template("home.html", deleted_claims=deleted_claims)
 
         else:
             user = Users.query.filter_by(username=request.form.get("username")).first()
