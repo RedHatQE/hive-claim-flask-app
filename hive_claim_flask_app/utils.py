@@ -132,12 +132,19 @@ def get_claimed_cluster_deployment(claim_name: str) -> ClusterDeployment:
 
 
 def get_claimed_cluster_web_console(claim_name: str) -> str:
+    _cluster_deployment = get_claimed_cluster_deployment(claim_name=claim_name)
+    if not _cluster_deployment.exists:
+        return "<p>Cluster not found</p>"
+
     _console_url = get_claimed_cluster_deployment(claim_name=claim_name).instance.status.webConsoleURL
     return f"<p><b>Console:</b> <a href='{_console_url}'>{_console_url}</a></p>"
 
 
 def get_claimed_cluster_creds(claim_name: str) -> str:
     _cluster_deployment = get_claimed_cluster_deployment(claim_name=claim_name)
+    if not _cluster_deployment.exists:
+        return "<p>Cluster not found</p>"
+
     _secret = Secret(
         name=_cluster_deployment.instance.spec.clusterMetadata.adminPasswordSecretRef.name,
         namespace=_cluster_deployment.namespace,
@@ -147,6 +154,9 @@ def get_claimed_cluster_creds(claim_name: str) -> str:
 
 def get_claimed_cluster_kubeconfig(claim_name: str) -> str:
     _cluster_deployment = get_claimed_cluster_deployment(claim_name=claim_name)
+    if not _cluster_deployment.exists:
+        return "<p>Cluster not found</p>"
+
     _secret = Secret(
         name=_cluster_deployment.instance.spec.clusterMetadata.adminKubeconfigSecretRef.name,
         namespace=_cluster_deployment.namespace,
