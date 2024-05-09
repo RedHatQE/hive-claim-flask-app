@@ -54,7 +54,8 @@ def get_all_claims() -> str:
                 claim_info += f"<td>{cond.reason}</td>"
                 claim_info += f"<td>{cond.message}</td>"
 
-        claim_info += f"<td><a href='/claim?name={_instnce.metadata.name}'>View</a></td>"
+        if _instnce.spec.namespace:
+            claim_info += f"<td><a href='/claim?name={_instnce.metadata.name}'>View</a></td>"
         claim_info += "</tr>"
         claims += claim_info
 
