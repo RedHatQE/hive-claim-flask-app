@@ -54,7 +54,8 @@ def get_all_claims() -> str:
                 claim_info += f"<td>{cond.reason}</td>"
                 claim_info += f"<td>{cond.message}</td>"
 
-        claim_info += f"<td><a href='/claim?name={_instnce.metadata.name}'>View</a></td>"
+        if _instnce.spec.namespace:
+            claim_info += f"<td><a href='/claim?name={_instnce.metadata.name}'>View</a></td>"
         claim_info += "</tr>"
         claims += claim_info
 
@@ -69,8 +70,8 @@ def get_cluster_pools() -> str:
         <tr>
         <th>Name</th>
         <th>Size</th>
-        <th>Ready</th>
-        <th>Standby</th>
+        <th>Claimed</th>
+        <th>Available</th>
         </tr>
     """
     select_form = """
@@ -82,12 +83,13 @@ def get_cluster_pools() -> str:
     for cp in ClusterPool.get(dyn_client=dyn_client, namespace=HIVE_CLUSTER_NAMESPACE):
         _instnce: ResourceInstance = cp.instance
         _name = _instnce.metadata.name
+        _size = _instnce.spec.size
         _status = _instnce.status
         pool_info = "<tr>"
         pool_info += f"<td>{_name}</td>"
-        pool_info += f"<td>{_instnce.spec.size}</td>"
-        pool_info += f"<td>{_status.ready if _status else 'NA'}</td>"
-        pool_info += f"<td>{_status.standby if _status else 'NA'}</td>"
+        pool_info += f"<td>{_size}</td>"
+        pool_info += f"<td>{_size - _status.size if _status else 'NA'}</td>"
+        pool_info += f"<td>{_status.size if _status else 'NA'}</td>"
         pool_info += "</tr>"
         pools += pool_info
         select_form += f"  <option value={_name}>{_name}</option>"
