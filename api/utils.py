@@ -1,3 +1,4 @@
+from typing import Dict, List
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
 from kubernetes.dynamic.resource import ResourceInstance
@@ -30,77 +31,42 @@ def create_users() -> None:
         db.session.add(user)
 
 
-def get_all_claims() -> str:
-    claims = """
-        <table style="width:100%">
-        <tr>
-        <th>Name</th>
-        <th>Pool</th>
-        <th>Namespace</th>
-        <th>Status</th>
-        <th>Message</th>
-        <th>Info</th>
-        </tr>
-    """
+def get_all_claims() -> List[Dict[str, str]]:
+    res = []
     dyn_client = get_client()
     for _claim in ClusterClaim.get(dyn_client=dyn_client, namespace=HIVE_CLUSTER_NAMESPACE):
-        claim_info = "<tr>"
         _instnce: ResourceInstance = _claim.instance
-        claim_info += f"<td>{_instnce.metadata.name}</td>"
-        claim_info += f"<td>{_instnce.spec.clusterPoolName}</td>"
-        claim_info += f"<td>{_instnce.spec.namespace or 'Not Ready'}</td>"
-        for cond in _instnce.status.conditions:
-            if cond.type == "Pending":
-                claim_info += f"<td>{cond.reason}</td>"
-                claim_info += f"<td>{cond.message}</td>"
 
-        if _instnce.spec.namespace:
-            claim_info += f"<td><a href='/claim?name={_instnce.metadata.name}'>View</a></td>"
-        claim_info += "</tr>"
-        claims += claim_info
+        res.append({
+            "name": _instnce.metadata.name,
+            "pool": _instnce.spec.clusterPoolName,
+            "namespace": _instnce.spec.namespace or "Not Ready",
+        })
 
-    claims += "</table>"
-
-    return claims
+    return res
 
 
-def get_cluster_pools() -> str:
-    pools = """
-        <table style="width:100%">
-        <tr>
-        <th>Name</th>
-        <th>Size</th>
-        <th>Claimed</th>
-        <th>Available</th>
-        </tr>
-    """
-    select_form = """
-    <form action="/" method="POST">
-    <label for="clusterpool">Claim from: </label>
-    <select name="ClusterPools" class="Input" id="clusterpool">
-    """
+def get_cluster_pools() -> List[Dict[str, str]]:
+    res = []
     dyn_client = get_client()
     for cp in ClusterPool.get(dyn_client=dyn_client, namespace=HIVE_CLUSTER_NAMESPACE):
         _instnce: ResourceInstance = cp.instance
         _name = _instnce.metadata.name
         _size = _instnce.spec.size
         _status = _instnce.status
-        pool_info = "<tr>"
-        pool_info += f"<td>{_name}</td>"
-        pool_info += f"<td>{_size}</td>"
-        pool_info += f"<td>{_size - _status.size if _status else 'NA'}</td>"
-        pool_info += f"<td>{_status.size if _status else 'NA'}</td>"
-        pool_info += "</tr>"
-        pools += pool_info
-        select_form += f"  <option value={_name}>{_name}</option>"
+        _pool = {
+            "name": _name,
+            "size": _size,
+            "claimed": _size - _status.size if _status else 0,
+            "available": _status.size if _status else 0,
+        }
+        res.append(_pool)
 
-    pools += "</table>"
-    select_form += "</select>"
-    select_form += '<input type="submit" value="Claim cluster" /></form>'
-    return f"{pools} <br /> {select_form}"
+    return res
 
 
-def claim_cluster(user: str, pool: str) -> str:
+def claim_cluster(user: str, pool: str) -> Dict[str, str]:
+    res = {"error": "", "name": ""}
     _claim = ClusterClaim(
         name=f"{user}-{shortuuid.uuid()[0:5].lower()}-cluster-claim",
         namespace=HIVE_CLUSTER_NAMESPACE,
@@ -109,8 +75,9 @@ def claim_cluster(user: str, pool: str) -> str:
     try:
         _claim.deploy()
     except Exception as exp:
-        return f"<p>{exp.summary()}</p>"  # type: ignore[attr-defined]
-    return f"<p>Cluster {_claim.name} claimed from {pool} by {user}</p>"
+        res["error"] = exp.summary()
+    res["name"] = _claim.name
+    return res
 
 
 def claim_cluster_delete(claim_name: str) -> None:
@@ -121,7 +88,7 @@ def claim_cluster_delete(claim_name: str) -> None:
     _claim.clean_up()
 
 
-def delete_all_claims(user: str) -> str:
+def delete_all_claims(user: str) -> Dict[str, str]:
     dyn_client = get_client()
     deleted_claims = ""
     for _claim in ClusterClaim.get(dyn_client=dyn_client, namespace=HIVE_CLUSTER_NAMESPACE):
@@ -129,7 +96,7 @@ def delete_all_claims(user: str) -> str:
             _claim.clean_up()
             deleted_claims += f"Deleted {_claim.name} <br />"
 
-    return deleted_claims
+    return {"deleted_claims": deleted_claims}
 
 
 def get_claimed_cluster_deployment(claim_name: str) -> ClusterDeployment | str:
@@ -141,25 +108,25 @@ def get_claimed_cluster_deployment(claim_name: str) -> ClusterDeployment | str:
     return ClusterDeployment(name=_instance.spec.namespace, namespace=_instance.spec.namespace)
 
 
-def get_claimed_cluster_web_console(claim_name: str) -> str:
+def get_claimed_cluster_web_console(claim_name: str) -> Dict[str, str]:
     _cluster_deployment = get_claimed_cluster_deployment(claim_name=claim_name)
     if isinstance(_cluster_deployment, str):
         return _cluster_deployment
 
     _console_url = _cluster_deployment.instance.status.webConsoleURL
-    return f"<p><b>Console:</b> <a href='{_console_url}'>{_console_url}</a></p>"
+    return {"console_url": _console_url}
 
 
-def get_claimed_cluster_creds(claim_name: str) -> str:
+def get_claimed_cluster_creds(claim_name: str) -> Dict[str, str]:
     _cluster_deployment = get_claimed_cluster_deployment(claim_name=claim_name)
     if isinstance(_cluster_deployment, str):
-        return ""
+        return {"username": "", "password": ""}
 
     _secret = Secret(
         name=_cluster_deployment.instance.spec.clusterMetadata.adminPasswordSecretRef.name,
         namespace=_cluster_deployment.namespace,
     )
-    return f"<p><b>username:</b> {_secret.instance.data.username}<br /><b>password:</b> {_secret.instance.data.password}</p>"
+    return {"username": _secret.instance.data.username, "password": _secret.instance.data.password}
 
 
 def get_claimed_cluster_kubeconfig(claim_name: str) -> str:
@@ -175,4 +142,4 @@ def get_claimed_cluster_kubeconfig(claim_name: str) -> str:
     with open(f"/tmp/{_kubeconfig_file_name}", "w") as fd:
         fd.write(base64.b64decode(_secret.instance.data.kubeconfig).decode())
 
-    return f"<p><b>Kubeconfig:</b> <a href='/kubeconfig/{_kubeconfig_file_name}'>Kubeconfig</a></p>"
+    return _kubeconfig_file_name

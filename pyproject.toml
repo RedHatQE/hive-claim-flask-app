@@ -24,7 +24,7 @@ authors = ["Meni Yakove <myakove@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.scripts]
-hive-claim-flask-app = "hive_claim_flask_app.app:main"
+hive-claim-flask-app = "api.api:main"
 
 
 [tool.poetry.dependencies]
@@ -37,6 +37,7 @@ pyaml-env = "^1.2.1"
 openshift-python-wrapper = "^10.0.39"
 shortuuid = "^1.0.13"
 openshift-python-utilities = "^5.0.41"
+flask-jwt-extended = "^4.6.0"
 
 
 [tool.poetry.group.dev.dependencies]
