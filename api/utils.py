@@ -1,4 +1,5 @@
-from typing import Dict, List
+from typing import Any, Dict, List
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
 from kubernetes.dynamic.resource import ResourceInstance
@@ -32,17 +33,46 @@ def create_users() -> None:
 
 
 def get_all_claims() -> List[Dict[str, str]]:
-    res = []
-    dyn_client = get_client()
-    for _claim in ClusterClaim.get(dyn_client=dyn_client, namespace=HIVE_CLUSTER_NAMESPACE):
+    def _claims(_claim: ClusterClaim) -> List[Dict[str, str]]:
+        res = []
         _instnce: ResourceInstance = _claim.instance
-
-        res.append({
-            "name": _instnce.metadata.name,
+        _namespace = _instnce.spec.namespace
+        _name = _instnce.metadata.name
+        _cluster_info = {
+            "name": _name,
+            "namespace": _namespace or "Not Ready",
             "pool": _instnce.spec.clusterPoolName,
-            "namespace": _instnce.spec.namespace or "Not Ready",
-        })
+        }
+        _cluster_info["info"] = []
+        if _namespace:
+            _info_dict = {
+                "console": get_claimed_cluster_web_console(claim_name=_name),
+                "kubeconfig": get_claimed_cluster_kubeconfig(claim_name=_name),
+                "creds": get_claimed_cluster_creds(claim_name=_name),
+                "name": _instnce.metadata.name,
+            }
+        else:
+            _info_dict = {
+                "console": "Not Ready",
+                "kubeconfig": "Not Ready",
+                "creds": "Not Ready",
+                "name": _name,
+            }
 
+        _cluster_info["info"].append(_info_dict)
+
+        res.append(_cluster_info)
+        return res
+
+    with ThreadPoolExecutor() as executor:
+        dyn_client = get_client()
+        futures = []
+        res = []
+        for claim in ClusterClaim.get(dyn_client=dyn_client, namespace=HIVE_CLUSTER_NAMESPACE):
+            futures.append(executor.submit(_claims, claim))
+
+        for future in as_completed(futures):
+            res.extend(future.result())
     return res
 
 
@@ -66,8 +96,8 @@ def get_cluster_pools() -> List[Dict[str, str]]:
 
 
 def claim_cluster(user: str, pool: str) -> Dict[str, str]:
-    res = {"error": "", "name": ""}
-    _claim = ClusterClaim(
+    res: Dict[str, str] = {"error": "", "name": ""}
+    _claim: Any = ClusterClaim(
         name=f"{user}-{shortuuid.uuid()[0:5].lower()}-cluster-claim",
         namespace=HIVE_CLUSTER_NAMESPACE,
         cluster_pool_name=pool,
@@ -75,7 +105,7 @@ def claim_cluster(user: str, pool: str) -> Dict[str, str]:
     try:
         _claim.deploy()
     except Exception as exp:
-        res["error"] = exp.summary()
+        res["error"] = exp.summary()  # type: ignore[attr-defined]
     res["name"] = _claim.name
     return res
 
@@ -91,6 +121,7 @@ def claim_cluster_delete(claim_name: str) -> None:
 def delete_all_claims(user: str) -> Dict[str, str]:
     dyn_client = get_client()
     deleted_claims = ""
+    _claim: Any
     for _claim in ClusterClaim.get(dyn_client=dyn_client, namespace=HIVE_CLUSTER_NAMESPACE):
         if user in _claim.name:
             _claim.clean_up()
@@ -100,7 +131,7 @@ def delete_all_claims(user: str) -> Dict[str, str]:
 
 
 def get_claimed_cluster_deployment(claim_name: str) -> ClusterDeployment | str:
-    _claim = ClusterClaim(name=claim_name, namespace=HIVE_CLUSTER_NAMESPACE)
+    _claim: Any = ClusterClaim(name=claim_name, namespace=HIVE_CLUSTER_NAMESPACE)
     _instance: ResourceInstance = _claim.instance
     if not _instance.spec.namespace:
         return "<p><b>ClusterDeployment not found for this claim</b></p>"
@@ -108,25 +139,25 @@ def get_claimed_cluster_deployment(claim_name: str) -> ClusterDeployment | str:
     return ClusterDeployment(name=_instance.spec.namespace, namespace=_instance.spec.namespace)
 
 
-def get_claimed_cluster_web_console(claim_name: str) -> Dict[str, str]:
+def get_claimed_cluster_web_console(claim_name: str) -> str:
     _cluster_deployment = get_claimed_cluster_deployment(claim_name=claim_name)
     if isinstance(_cluster_deployment, str):
         return _cluster_deployment
 
     _console_url = _cluster_deployment.instance.status.webConsoleURL
-    return {"console_url": _console_url}
+    return _console_url
 
 
-def get_claimed_cluster_creds(claim_name: str) -> Dict[str, str]:
+def get_claimed_cluster_creds(claim_name: str) -> str:
     _cluster_deployment = get_claimed_cluster_deployment(claim_name=claim_name)
     if isinstance(_cluster_deployment, str):
-        return {"username": "", "password": ""}
+        return ""
 
     _secret = Secret(
         name=_cluster_deployment.instance.spec.clusterMetadata.adminPasswordSecretRef.name,
         namespace=_cluster_deployment.namespace,
     )
-    return {"username": _secret.instance.data.username, "password": _secret.instance.data.password}
+    return f"Username {_secret.instance.data.username}:Password {_secret.instance.data.password}"
 
 
 def get_claimed_cluster_kubeconfig(claim_name: str) -> str:
@@ -142,4 +173,4 @@ def get_claimed_cluster_kubeconfig(claim_name: str) -> str:
     with open(f"/tmp/{_kubeconfig_file_name}", "w") as fd:
         fd.write(base64.b64decode(_secret.instance.data.kubeconfig).decode())
 
-    return _kubeconfig_file_name
+    return f"/kubeconfig/{_kubeconfig_file_name}"
