@@ -163,3 +163,4 @@ cython_debug/
 instance
 docker-compose.yaml
 .local
+dump.rdb

@@ -21,7 +21,6 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 function Row(props) {
   const { row: claim } = props;
   const [open, setOpen] = React.useState(false);
-  console.log(claim);
 
   return (
     <React.Fragment>
@@ -51,7 +50,7 @@ function Row(props) {
             color="error"
             startIcon={<DeleteIcon />}
             onClick={() => {
-              fetch("/delete-claim?name=" + claim.name);
+              fetch("http://localhost:5000/delete-claim?name=" + claim.name);
             }}
           >
             {" "}
@@ -133,7 +132,7 @@ function ClusterClaims() {
   const [clusterClaims, setClusterClaims] = useState([]);
 
   const getClusterClaims = async () => {
-    const res = await fetch("/cluster-claims");
+    const res = await fetch("http://localhost:5000/cluster-claims");
     const data = await res.json();
     setClusterClaims(data);
   };

@@ -1,7 +1,5 @@
 from typing import Any, Dict, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from flask_login import UserMixin
-from flask_sqlalchemy import SQLAlchemy
 from kubernetes.dynamic.resource import ResourceInstance
 from ocp_resources.cluster_claim import ClusterClaim
 from ocp_resources.cluster_pool import ClusterPool
@@ -10,26 +8,9 @@ from ocp_resources.secret import Secret
 from ocp_utilities.infra import base64, get_client
 import os
 
-from pyaml_env import parse_config
 import shortuuid
 
 HIVE_CLUSTER_NAMESPACE = os.environ["HIVE_CLAIM_FLASK_APP_NAMESPACE"]
-
-db = SQLAlchemy()
-
-
-class Users(UserMixin, db.Model):  # type: ignore[name-defined]
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(250), unique=True, nullable=False)
-    password = db.Column(db.String(250), nullable=False)
-
-
-def create_users() -> None:
-    _config = parse_config(os.environ["HIVE_CLAIM_FLASK_APP_USERS_FILE"])
-    _pass = _config["password"]
-    for user in _config["users"]:
-        user = Users(username=user, password=_pass)
-        db.session.add(user)
 
 
 def get_all_claims() -> List[Dict[str, str]]:

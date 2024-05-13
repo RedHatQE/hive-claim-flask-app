@@ -12,7 +12,7 @@ function DeleteAllClaims() {
 
   const getClusterClaims = async () => {
     setLoading(true);
-    const res = await fetch("/cluster-claims");
+    const res = await fetch("http://localhost:5000/cluster-claims");
     const data = await res.json();
     setClusterClaims(data);
     setLoading(false);

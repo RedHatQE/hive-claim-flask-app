@@ -16,7 +16,7 @@ function ClusterPools() {
 
   const getClusterPools = async () => {
     setLoading(true);
-    const res = await fetch("/cluster-pools");
+    const res = await fetch("http://localhost:5000/cluster-pools");
     const data = await res.json();
     setClusterPools(data);
     setLoading(false);
@@ -66,7 +66,10 @@ function ClusterPools() {
                         <Button
                           endIcon={<SendIcon />}
                           onClick={() => {
-                            fetch("/claim-cluster?name=" + pool.name);
+                            fetch(
+                              "http://localhost:5000/claim-cluster?name=" +
+                                pool.name,
+                            );
                           }}
                         >
                           Claim
