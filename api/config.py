@@ -6,7 +6,7 @@ DB_URI = os.path.join("/tmp", "db.sqlite")
 
 
 class ApplicationConfig:
-    SECRET_KEY = "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lT"
+    SECRET_KEY = os.environ["HIVE_CLAIM_FLASK_APP_SECRET_KEY"]
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = True
